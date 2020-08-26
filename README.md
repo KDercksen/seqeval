@@ -12,6 +12,7 @@ seqeval supports following formats:
 * IOE1
 * IOE2
 * IOBES
+* IOBLU
 
 and supports following metrics:
 

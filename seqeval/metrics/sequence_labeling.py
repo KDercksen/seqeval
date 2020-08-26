@@ -29,22 +29,22 @@ def get_entities(seq, suffix=False):
     """
     # for nested list
     if any(isinstance(s, list) for s in seq):
-        seq = [item for sublist in seq for item in sublist + ['O']]
+        seq = [item for sublist in seq for item in sublist + ["O"]]
 
-    prev_tag = 'O'
-    prev_type = ''
+    prev_tag = "O"
+    prev_type = ""
     begin_offset = 0
     chunks = []
-    for i, chunk in enumerate(seq + ['O']):
+    for i, chunk in enumerate(seq + ["O"]):
         if suffix:
             tag = chunk[-1]
-            type_ = chunk.split('-')[0]
+            type_ = chunk.split("-")[0]
         else:
             tag = chunk[0]
-            type_ = chunk.split('-')[-1]
+            type_ = chunk.split("-")[-1]
 
         if end_of_chunk(prev_tag, tag, prev_type, type_):
-            chunks.append((prev_type, begin_offset, i-1))
+            chunks.append((prev_type, begin_offset, i - 1))
         if start_of_chunk(prev_tag, tag, prev_type, type_):
             begin_offset = i
         prev_tag = tag
@@ -67,17 +67,33 @@ def end_of_chunk(prev_tag, tag, prev_type, type_):
     """
     chunk_end = False
 
-    if prev_tag == 'E': chunk_end = True
-    if prev_tag == 'S': chunk_end = True
+    if prev_tag == "E":
+        chunk_end = True
+    if prev_tag == "L":
+        chunk_end = True
+    if prev_tag == "S":
+        chunk_end = True
+    if prev_tag == "U":
+        chunk_end = True
 
-    if prev_tag == 'B' and tag == 'B': chunk_end = True
-    if prev_tag == 'B' and tag == 'S': chunk_end = True
-    if prev_tag == 'B' and tag == 'O': chunk_end = True
-    if prev_tag == 'I' and tag == 'B': chunk_end = True
-    if prev_tag == 'I' and tag == 'S': chunk_end = True
-    if prev_tag == 'I' and tag == 'O': chunk_end = True
+    if prev_tag == "B" and tag == "B":
+        chunk_end = True
+    if prev_tag == "B" and tag == "S":
+        chunk_end = True
+    if prev_tag == "B" and tag == "U":
+        chunk_end = True
+    if prev_tag == "B" and tag == "O":
+        chunk_end = True
+    if prev_tag == "I" and tag == "B":
+        chunk_end = True
+    if prev_tag == "I" and tag == "S":
+        chunk_end = True
+    if prev_tag == "I" and tag == "U":
+        chunk_end = True
+    if prev_tag == "I" and tag == "O":
+        chunk_end = True
 
-    if prev_tag != 'O' and prev_tag != '.' and prev_type != type_:
+    if prev_tag != "O" and prev_tag != "." and prev_type != type_:
         chunk_end = True
 
     return chunk_end
@@ -97,23 +113,43 @@ def start_of_chunk(prev_tag, tag, prev_type, type_):
     """
     chunk_start = False
 
-    if tag == 'B': chunk_start = True
-    if tag == 'S': chunk_start = True
+    if tag == "B":
+        chunk_start = True
+    if tag == "S":
+        chunk_start = True
+    if tag == "U":
+        chunk_start = True
 
-    if prev_tag == 'E' and tag == 'E': chunk_start = True
-    if prev_tag == 'E' and tag == 'I': chunk_start = True
-    if prev_tag == 'S' and tag == 'E': chunk_start = True
-    if prev_tag == 'S' and tag == 'I': chunk_start = True
-    if prev_tag == 'O' and tag == 'E': chunk_start = True
-    if prev_tag == 'O' and tag == 'I': chunk_start = True
+    if prev_tag == "E" and tag == "E":
+        chunk_start = True
+    if prev_tag == "L" and tag == "L":
+        chunk_start = True
+    if prev_tag == "E" and tag == "I":
+        chunk_start = True
+    if prev_tag == "L" and tag == "I":
+        chunk_start = True
+    if prev_tag == "S" and tag == "E":
+        chunk_start = True
+    if prev_tag == "U" and tag == "L":
+        chunk_start = True
+    if prev_tag == "S" and tag == "I":
+        chunk_start = True
+    if prev_tag == "U" and tag == "I":
+        chunk_start = True
+    if prev_tag == "O" and tag == "E":
+        chunk_start = True
+    if prev_tag == "O" and tag == "L":
+        chunk_start = True
+    if prev_tag == "O" and tag == "I":
+        chunk_start = True
 
-    if tag != 'O' and tag != '.' and prev_type != type_:
+    if tag != "O" and tag != "." and prev_type != type_:
         chunk_start = True
 
     return chunk_start
 
 
-def f1_score(y_true, y_pred, average='micro', suffix=False):
+def f1_score(y_true, y_pred, average="micro", suffix=False):
     """Compute the F1 score.
 
     The F1 score can be interpreted as a weighted average of the precision and
@@ -176,7 +212,7 @@ def accuracy_score(y_true, y_pred):
         y_true = [item for sublist in y_true for item in sublist]
         y_pred = [item for sublist in y_pred for item in sublist]
 
-    nb_correct = sum(y_t==y_p for y_t, y_p in zip(y_true, y_pred))
+    nb_correct = sum(y_t == y_p for y_t, y_p in zip(y_true, y_pred))
     nb_true = len(y_true)
 
     score = nb_correct / nb_true
@@ -184,7 +220,7 @@ def accuracy_score(y_true, y_pred):
     return score
 
 
-def precision_score(y_true, y_pred, average='micro', suffix=False):
+def precision_score(y_true, y_pred, average="micro", suffix=False):
     """Compute the precision.
 
     The precision is the ratio ``tp / (tp + fp)`` where ``tp`` is the number of
@@ -218,7 +254,7 @@ def precision_score(y_true, y_pred, average='micro', suffix=False):
     return score
 
 
-def recall_score(y_true, y_pred, average='micro', suffix=False):
+def recall_score(y_true, y_pred, average="micro", suffix=False):
     """Compute the recall.
 
     The recall is the ratio ``tp / (tp + fn)`` where ``tp`` is the number of
@@ -274,13 +310,14 @@ def performance_measure(y_true, y_pred):
     if any(isinstance(s, list) for s in y_true):
         y_true = [item for sublist in y_true for item in sublist]
         y_pred = [item for sublist in y_pred for item in sublist]
-    performace_dict['TP'] = sum(y_t == y_p for y_t, y_p in zip(y_true, y_pred)
-                                if ((y_t != 'O') or (y_p != 'O')))
-    performace_dict['FP'] = sum(y_t != y_p for y_t, y_p in zip(y_true, y_pred))
-    performace_dict['FN'] = sum(((y_t != 'O') and (y_p == 'O'))
-                                for y_t, y_p in zip(y_true, y_pred))
-    performace_dict['TN'] = sum((y_t == y_p == 'O')
-                                for y_t, y_p in zip(y_true, y_pred))
+    performace_dict["TP"] = sum(
+        y_t == y_p for y_t, y_p in zip(y_true, y_pred) if ((y_t != "O") or (y_p != "O"))
+    )
+    performace_dict["FP"] = sum(y_t != y_p for y_t, y_p in zip(y_true, y_pred))
+    performace_dict["FN"] = sum(
+        ((y_t != "O") and (y_p == "O")) for y_t, y_p in zip(y_true, y_pred)
+    )
+    performace_dict["TN"] = sum((y_t == y_p == "O") for y_t, y_p in zip(y_true, y_pred))
 
     return performace_dict
 
@@ -322,15 +359,15 @@ def classification_report(y_true, y_pred, digits=2, suffix=False):
     for e in pred_entities:
         d2[e[0]].add((e[1], e[2]))
 
-    last_line_heading = 'macro avg'
+    last_line_heading = "macro avg"
     width = max(name_width, len(last_line_heading), digits)
 
     headers = ["precision", "recall", "f1-score", "support"]
-    head_fmt = u'{:>{width}s} ' + u' {:>9}' * len(headers)
-    report = head_fmt.format(u'', *headers, width=width)
-    report += u'\n\n'
+    head_fmt = u"{:>{width}s} " + u" {:>9}" * len(headers)
+    report = head_fmt.format(u"", *headers, width=width)
+    report += u"\n\n"
 
-    row_fmt = u'{:>{width}s} ' + u' {:>9.{digits}f}' * 3 + u' {:>9}\n'
+    row_fmt = u"{:>{width}s} " + u" {:>9.{digits}f}" * 3 + u" {:>9}\n"
 
     ps, rs, f1s, s = [], [], [], []
     for type_name, true_entities in d1.items():
@@ -343,27 +380,35 @@ def classification_report(y_true, y_pred, digits=2, suffix=False):
         r = nb_correct / nb_true if nb_true > 0 else 0
         f1 = 2 * p * r / (p + r) if p + r > 0 else 0
 
-        report += row_fmt.format(*[type_name, p, r, f1, nb_true], width=width, digits=digits)
+        report += row_fmt.format(
+            *[type_name, p, r, f1, nb_true], width=width, digits=digits
+        )
 
         ps.append(p)
         rs.append(r)
         f1s.append(f1)
         s.append(nb_true)
 
-    report += u'\n'
+    report += u"\n"
 
     # compute averages
-    report += row_fmt.format('micro avg',
-                             precision_score(y_true, y_pred, suffix=suffix),
-                             recall_score(y_true, y_pred, suffix=suffix),
-                             f1_score(y_true, y_pred, suffix=suffix),
-                             np.sum(s),
-                             width=width, digits=digits)
-    report += row_fmt.format(last_line_heading,
-                             np.average(ps, weights=s),
-                             np.average(rs, weights=s),
-                             np.average(f1s, weights=s),
-                             np.sum(s),
-                             width=width, digits=digits)
+    report += row_fmt.format(
+        "micro avg",
+        precision_score(y_true, y_pred, suffix=suffix),
+        recall_score(y_true, y_pred, suffix=suffix),
+        f1_score(y_true, y_pred, suffix=suffix),
+        np.sum(s),
+        width=width,
+        digits=digits,
+    )
+    report += row_fmt.format(
+        last_line_heading,
+        np.average(ps, weights=s),
+        np.average(rs, weights=s),
+        np.average(f1s, weights=s),
+        np.sum(s),
+        width=width,
+        digits=digits,
+    )
 
     return report
