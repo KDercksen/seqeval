@@ -306,23 +306,25 @@ def performance_measure(y_true, y_pred):
         >>> performance_measure(y_true, y_pred)
         (3, 3, 1, 4)
     """
-    performace_dict = dict()
+    performance_dict = dict()
     if any(isinstance(s, list) for s in y_true):
         y_true = [item for sublist in y_true for item in sublist]
         y_pred = [item for sublist in y_pred for item in sublist]
-    performace_dict["TP"] = sum(
+    performance_dict["TP"] = sum(
         y_t == y_p for y_t, y_p in zip(y_true, y_pred) if ((y_t != "O") or (y_p != "O"))
     )
-    performace_dict["FP"] = sum(y_t != y_p for y_t, y_p in zip(y_true, y_pred))
-    performace_dict["FN"] = sum(
+    performance_dict["FP"] = sum(y_t != y_p for y_t, y_p in zip(y_true, y_pred))
+    performance_dict["FN"] = sum(
         ((y_t != "O") and (y_p == "O")) for y_t, y_p in zip(y_true, y_pred)
     )
-    performace_dict["TN"] = sum((y_t == y_p == "O") for y_t, y_p in zip(y_true, y_pred))
+    performance_dict["TN"] = sum(
+        (y_t == y_p == "O") for y_t, y_p in zip(y_true, y_pred)
+    )
 
-    return performace_dict
+    return performance_dict
 
 
-def classification_report(y_true, y_pred, digits=2, suffix=False):
+def classification_report(y_true, y_pred, digits=2, suffix=False, output_json=False):
     """Build a text report showing the main classification metrics.
 
     Args:
@@ -369,8 +371,12 @@ def classification_report(y_true, y_pred, digits=2, suffix=False):
 
     row_fmt = u"{:>{width}s} " + u" {:>9.{digits}f}" * 3 + u" {:>9}\n"
 
+    # build dict with scores as well
+    result_dict = {"ents_per_type": {}}  # type: ignore
+
     ps, rs, f1s, s = [], [], [], []
     for type_name, true_entities in d1.items():
+        result_dict["ents_per_type"][type_name] = {}
         pred_entities = d2[type_name]
         nb_correct = len(true_entities & pred_entities)
         nb_pred = len(pred_entities)
@@ -384,6 +390,9 @@ def classification_report(y_true, y_pred, digits=2, suffix=False):
             *[type_name, p, r, f1, nb_true], width=width, digits=digits
         )
 
+        for key, score in zip(["p", "r", "f1", "support"], [p, r, f1, nb_true]):
+            result_dict["ents_per_type"][type_name][key] = score
+
         ps.append(p)
         rs.append(r)
         f1s.append(f1)
@@ -392,23 +401,36 @@ def classification_report(y_true, y_pred, digits=2, suffix=False):
     report += u"\n"
 
     # compute averages
+    result_dict["micro_avg"] = {
+        "p": precision_score(y_true, y_pred, suffix=suffix),
+        "r": recall_score(y_true, y_pred, suffix=suffix),
+        "f1": f1_score(y_true, y_pred, suffix=suffix),
+        "support": np.sum(s),
+    }
     report += row_fmt.format(
         "micro avg",
-        precision_score(y_true, y_pred, suffix=suffix),
-        recall_score(y_true, y_pred, suffix=suffix),
-        f1_score(y_true, y_pred, suffix=suffix),
-        np.sum(s),
-        width=width,
-        digits=digits,
-    )
-    report += row_fmt.format(
-        last_line_heading,
-        np.average(ps, weights=s),
-        np.average(rs, weights=s),
-        np.average(f1s, weights=s),
-        np.sum(s),
+        result_dict["micro_avg"]["p"],
+        result_dict["micro_avg"]["r"],
+        result_dict["micro_avg"]["f1"],
+        result_dict["micro_avg"]["support"],
         width=width,
         digits=digits,
     )
 
-    return report
+    result_dict["macro_avg"] = {
+        "p": np.average(ps, weights=s),
+        "r": np.average(rs, weights=s),
+        "f1": np.average(f1s, weights=s),
+        "support": np.sum(s),
+    }
+    report += row_fmt.format(
+        last_line_heading,
+        result_dict["macro_avg"]["p"],
+        result_dict["macro_avg"]["r"],
+        result_dict["macro_avg"]["f1"],
+        result_dict["macro_avg"]["support"],
+        width=width,
+        digits=digits,
+    )
+
+    return result_dict if output_json else report
