@@ -405,7 +405,7 @@ def classification_report(y_true, y_pred, digits=2, suffix=False, output_json=Fa
         "p": precision_score(y_true, y_pred, suffix=suffix),
         "r": recall_score(y_true, y_pred, suffix=suffix),
         "f1": f1_score(y_true, y_pred, suffix=suffix),
-        "support": np.sum(s),
+        "support": int(np.sum(s)),
     }
     report += row_fmt.format(
         "micro avg",
@@ -418,10 +418,10 @@ def classification_report(y_true, y_pred, digits=2, suffix=False, output_json=Fa
     )
 
     result_dict["macro_avg"] = {
-        "p": np.average(ps, weights=s),
-        "r": np.average(rs, weights=s),
-        "f1": np.average(f1s, weights=s),
-        "support": np.sum(s),
+        "p": float(np.average(ps, weights=s)),
+        "r": float(np.average(rs, weights=s)),
+        "f1": float(np.average(f1s, weights=s)),
+        "support": int(np.sum(s)),
     }
     report += row_fmt.format(
         last_line_heading,
