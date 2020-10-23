@@ -1,10 +1,10 @@
 import numpy as np
 from keras.callbacks import Callback
-from seqeval.metrics import f1_score, classification_report
+
+from seqeval.metrics import classification_report, f1_score
 
 
 class F1Metrics(Callback):
-
     def __init__(self, id2label, pad_value=0, validation_data=None, digits=4):
         """
         Args:
@@ -31,8 +31,10 @@ class F1Metrics(Callback):
         Returns:
             y: label name list.
         """
-        y = [[self.id2label[idx] for idx in row[row_indexes]] for
-             row, row_indexes in zip(y, array_indexes)]
+        y = [
+            [self.id2label[idx] for idx in row[row_indexes]]
+            for row, row_indexes in zip(y, array_indexes)
+        ]
         return y
 
     def predict(self, X, y):
@@ -52,7 +54,9 @@ class F1Metrics(Callback):
         y_true = np.argmax(y, -1)
         y_pred = np.argmax(y_pred, -1)
 
-        non_pad_indexes = [np.nonzero(y_true_row != self.pad_value)[0] for y_true_row in y_true]
+        non_pad_indexes = [
+            np.nonzero(y_true_row != self.pad_value)[0] for y_true_row in y_true
+        ]
 
         y_true = self.convert_idx_to_name(y_true, non_pad_indexes)
         y_pred = self.convert_idx_to_name(y_pred, non_pad_indexes)
@@ -70,7 +74,7 @@ class F1Metrics(Callback):
             score: f1 score.
         """
         score = f1_score(y_true, y_pred)
-        print(' - f1: {:04.2f}'.format(score * 100))
+        print(" - f1: {:04.2f}".format(score * 100))
         if self.digits:
             print(classification_report(y_true, y_pred, digits=self.digits))
         return score
@@ -86,7 +90,7 @@ class F1Metrics(Callback):
         y = self.validation_data[1]
         y_true, y_pred = self.predict(X, y)
         score = self.score(y_true, y_pred)
-        logs['f1'] = score
+        logs["f1"] = score
 
     def on_epoch_end_fit_generator(self, epoch, logs={}):
         y_true = []
@@ -96,4 +100,4 @@ class F1Metrics(Callback):
             y_true.extend(y_true_batch)
             y_pred.extend(y_pred_batch)
         score = self.score(y_true, y_pred)
-        logs['f1'] = score
+        logs["f1"] = score

@@ -16,35 +16,43 @@ from keras.preprocessing.text import Tokenizer
 from keras.utils import to_categorical
 
 from seqeval.callbacks import F1Metrics
-from seqeval.metrics import (f1_score, accuracy_score, classification_report,
-                             precision_score, recall_score,
-                             performance_measure)
+from seqeval.metrics import (accuracy_score, classification_report, f1_score,
+                             performance_measure, precision_score,
+                             recall_score)
 from seqeval.metrics.sequence_labeling import get_entities
 
 
 class TestMetrics(unittest.TestCase):
-
     @classmethod
     def setUpClass(cls):
-        cls.file_name = os.path.join(os.path.dirname(__file__), 'data/ground_truth.txt')
+        cls.file_name = os.path.join(os.path.dirname(__file__), "data/ground_truth.txt")
         cls.y_true, cls.y_pred = cls.load_labels(cls, cls.file_name)
-        cls.inv_file_name = os.path.join(os.path.dirname(__file__), 'data/ground_truth_inv.txt')
+        cls.inv_file_name = os.path.join(
+            os.path.dirname(__file__), "data/ground_truth_inv.txt"
+        )
         cls.y_true_inv, cls.y_pred_inv = cls.load_labels(cls, cls.inv_file_name)
 
     def test_get_entities(self):
-        y_true = ['O', 'O', 'O', 'B-MISC', 'I-MISC', 'I-MISC', 'O', 'B-PER', 'I-PER']
-        self.assertEqual(get_entities(y_true), [('MISC', 3, 5), ('PER', 7, 8)])
+        y_true = ["O", "O", "O", "B-MISC", "I-MISC", "I-MISC", "O", "B-PER", "I-PER"]
+        self.assertEqual(get_entities(y_true), [("MISC", 3, 5), ("PER", 7, 8)])
 
     def test_get_entities_with_suffix_style(self):
-        y_true = ['O', 'O', 'O', 'MISC-B', 'MISC-I', 'MISC-I', 'O', 'PER-B', 'PER-I']
-        self.assertEqual(get_entities(y_true, suffix=True), [('MISC', 3, 5), ('PER', 7, 8)])
+        y_true = ["O", "O", "O", "MISC-B", "MISC-I", "MISC-I", "O", "PER-B", "PER-I"]
+        self.assertEqual(
+            get_entities(y_true, suffix=True), [("MISC", 3, 5), ("PER", 7, 8)]
+        )
 
     def test_performance_measure(self):
-        y_true = [['O', 'O', 'O', 'B-MISC', 'I-MISC', 'O', 'B-ORG'], ['B-PER', 'I-PER', 'O']]
-        y_pred = [['O', 'O', 'B-MISC', 'I-MISC', 'I-MISC', 'O', 'O'], ['B-PER', 'I-PER', 'O']]
+        y_true = [
+            ["O", "O", "O", "B-MISC", "I-MISC", "O", "B-ORG"],
+            ["B-PER", "I-PER", "O"],
+        ]
+        y_pred = [
+            ["O", "O", "B-MISC", "I-MISC", "I-MISC", "O", "O"],
+            ["B-PER", "I-PER", "O"],
+        ]
         performance_dict = performance_measure(y_true, y_pred)
-        self.assertDictEqual(performance_dict, {
-                             'FN': 1, 'FP': 3, 'TN': 4, 'TP': 3})
+        self.assertDictEqual(performance_dict, {"FN": 1, "FP": 3, "TN": 4, "TP": 3})
 
     def test_classification_report(self):
         print(classification_report(self.y_true, self.y_pred))
@@ -54,7 +62,9 @@ class TestMetrics(unittest.TestCase):
 
     def test_by_ground_truth(self):
         with open(self.file_name) as f:
-            output = subprocess.check_output(['perl', 'conlleval.pl'], stdin=f).decode('utf-8')
+            output = subprocess.check_output(["perl", "conlleval.pl"], stdin=f).decode(
+                "utf-8"
+            )
             acc_true, p_true, r_true, f1_true = self.parse_conlleval_output(output)
 
             acc_pred = accuracy_score(self.y_true, self.y_pred)
@@ -85,15 +95,19 @@ class TestMetrics(unittest.TestCase):
             self.assertLess(abs(f1_pred - f1_pred_inv), 1e-4)
 
     def test_statistical_tests(self):
-        filepath = 'eval_data.txt'
-        for prefix in ['BIO', 'EIO']:
+        filepath = "eval_data.txt"
+        for prefix in ["BIO", "EIO"]:
             for i in range(10000):
-                print('Iteration: {}'.format(i))
+                print("Iteration: {}".format(i))
                 self.generate_eval_data(filepath, prefix)
                 y_true, y_pred = self.load_labels(filepath)
                 with open(filepath) as f:
-                    output = subprocess.check_output(['perl', 'conlleval.pl'], stdin=f).decode('utf-8')
-                    acc_true, p_true, r_true, f1_true = self.parse_conlleval_output(output)
+                    output = subprocess.check_output(
+                        ["perl", "conlleval.pl"], stdin=f
+                    ).decode("utf-8")
+                    acc_true, p_true, r_true, f1_true = self.parse_conlleval_output(
+                        output
+                    )
 
                     acc_pred = accuracy_score(y_true, y_pred)
                     p_pred = precision_score(y_true, y_pred)
@@ -115,11 +129,13 @@ class TestMetrics(unittest.TestCase):
 
         def prepare(y, padding):
             indexes = tokenizer.texts_to_sequences(y)
-            padded = pad_sequences(indexes, maxlen=maxlen, padding=padding, truncating=padding)
+            padded = pad_sequences(
+                indexes, maxlen=maxlen, padding=padding, truncating=padding
+            )
             categorical = to_categorical(padded)
             return categorical
 
-        for padding in ('pre', 'post'):
+        for padding in ("pre", "post"):
             callback = F1Metrics(id2label=tokenizer.index_word)
             y_true_cat = prepare(self.y_true, padding)
             y_pred_cat = prepare(self.y_pred, padding)
@@ -137,11 +153,15 @@ class TestMetrics(unittest.TestCase):
             self.assertEqual(y_true_cb, self.y_true)
 
             # Verify that the callback stores the correct number in logs
-            fake_model.compile(optimizer='adam', loss='categorical_crossentropy')
-            history = fake_model.fit(x=X, batch_size=y_true_cat.shape[0], y=y_true_cat,
-                                     validation_data=(X, y_true_cat),
-                                     callbacks=[callback])
-            actual_score = history.history['f1'][0]
+            fake_model.compile(optimizer="adam", loss="categorical_crossentropy")
+            history = fake_model.fit(
+                x=X,
+                batch_size=y_true_cat.shape[0],
+                y=y_true_cat,
+                validation_data=(X, y_true_cat),
+                callbacks=[callback],
+            )
+            actual_score = history.history["f1"][0]
             self.assertAlmostEqual(actual_score, expected_score)
 
     def load_labels(self, filename):
@@ -156,7 +176,7 @@ class TestMetrics(unittest.TestCase):
                         y_pred.append(tags_pred)
                         tags_true, tags_pred = [], []
                 else:
-                    _, _, tag_true, tag_pred = line.split(' ')
+                    _, _, tag_true, tag_pred = line.split(" ")
                     tags_true.append(tag_true)
                     tags_pred.append(tag_pred)
             else:
@@ -166,9 +186,9 @@ class TestMetrics(unittest.TestCase):
 
     @staticmethod
     def parse_conlleval_output(text):
-        eval_line = text.split('\n')[1]
-        items = eval_line.split(' ')
-        accuracy, precision, recall = [item[:-2] for item in items if '%' in item]
+        eval_line = text.split("\n")[1]
+        items = eval_line.split(" ")
+        accuracy, precision, recall = [item[:-2] for item in items if "%" in item]
         f1 = items[-1]
 
         accuracy = float(accuracy) / 100
@@ -179,22 +199,26 @@ class TestMetrics(unittest.TestCase):
         return accuracy, precision, recall, f1
 
     @staticmethod
-    def generate_eval_data(filepath, prefixes='BIO'):
-        types = ['PER', 'MISC', 'ORG', 'LOC']
-        report = ''
-        raw_fmt = '{} {} {} {}\n'
+    def generate_eval_data(filepath, prefixes="BIO"):
+        types = ["PER", "MISC", "ORG", "LOC"]
+        report = ""
+        raw_fmt = "{} {} {} {}\n"
         for i in range(1000):
             type_true = random.choice(types)
             type_pred = random.choice(types)
             prefix_true = random.choice(prefixes)
             prefix_pred = random.choice(prefixes)
-            true_out = 'O' if prefix_true == 'O' else '{}-{}'.format(prefix_true, type_true)
-            pred_out = 'O' if prefix_pred == 'O' else '{}-{}'.format(prefix_pred, type_pred)
-            report += raw_fmt.format('X', 'X', true_out, pred_out)
+            true_out = (
+                "O" if prefix_true == "O" else "{}-{}".format(prefix_true, type_true)
+            )
+            pred_out = (
+                "O" if prefix_pred == "O" else "{}-{}".format(prefix_pred, type_pred)
+            )
+            report += raw_fmt.format("X", "X", true_out, pred_out)
 
             # end of sentence
             if random.random() > 0.95:
-                report += '\n'
+                report += "\n"
 
-        with open(filepath, 'w') as f:
+        with open(filepath, "w") as f:
             f.write(report)

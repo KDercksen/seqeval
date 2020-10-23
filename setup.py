@@ -6,54 +6,50 @@ import sys
 
 from setuptools import find_packages, setup
 
-
 # Package meta-data.
-NAME = 'seqeval'
-DESCRIPTION = 'Testing framework for sequence labeling'
-URL = 'https://github.com/chakki-works/seqeval'
-EMAIL = 'hiroki.nakayama.py@gmail.com'
-AUTHOR = 'Hironsan'
-LICENSE = 'MIT'
+NAME = "seqeval"
+DESCRIPTION = "Testing framework for sequence labeling"
+URL = "https://github.com/chakki-works/seqeval"
+EMAIL = "hiroki.nakayama.py@gmail.com"
+AUTHOR = "Hironsan"
+LICENSE = "MIT"
 
 here = os.path.abspath(os.path.dirname(__file__))
-with io.open(os.path.join(here, 'README.md'), encoding='utf-8') as f:
-    long_description = '\n' + f.read()
+with io.open(os.path.join(here, "README.md"), encoding="utf-8") as f:
+    long_description = "\n" + f.read()
 
-if sys.argv[-1] == 'publish':
-    os.system('python setup.py sdist bdist_wheel upload')
+if sys.argv[-1] == "publish":
+    os.system("python setup.py sdist bdist_wheel upload")
     sys.exit()
 
-required = ['numpy>=1.14.0', 'Keras>=2.2.4']
+required = ["numpy>=1.14.0", "Keras>=2.2.4"]
 
 setup(
     name=NAME,
     use_scm_version=True,
-    setup_requires=['setuptools_scm'],
+    setup_requires=["setuptools_scm"],
     description=DESCRIPTION,
     long_description=long_description,
-    long_description_content_type='text/markdown',
+    long_description_content_type="text/markdown",
     author=AUTHOR,
     author_email=EMAIL,
     url=URL,
-    packages=find_packages(exclude=('tests',)),
+    packages=find_packages(exclude=("tests",)),
     install_requires=required,
-    extras_require={
-        'cpu': ['tensorflow>=1.13.1'],
-        'gpu': ['tensorflow-gpu'],
-    },
+    extras_require={"cpu": ["tensorflow>=1.13.1"], "gpu": ["tensorflow-gpu"],},
     include_package_data=True,
     license=LICENSE,
     classifiers=[
-        'License :: OSI Approved :: MIT License',
-        'Programming Language :: Python',
-        'Programming Language :: Python :: 2.6',
-        'Programming Language :: Python :: 2.7',
-        'Programming Language :: Python :: 3',
-        'Programming Language :: Python :: 3.3',
-        'Programming Language :: Python :: 3.4',
-        'Programming Language :: Python :: 3.5',
-        'Programming Language :: Python :: 3.6',
-        'Programming Language :: Python :: Implementation :: CPython',
-        'Programming Language :: Python :: Implementation :: PyPy'
+        "License :: OSI Approved :: MIT License",
+        "Programming Language :: Python",
+        "Programming Language :: Python :: 2.6",
+        "Programming Language :: Python :: 2.7",
+        "Programming Language :: Python :: 3",
+        "Programming Language :: Python :: 3.3",
+        "Programming Language :: Python :: 3.4",
+        "Programming Language :: Python :: 3.5",
+        "Programming Language :: Python :: 3.6",
+        "Programming Language :: Python :: Implementation :: CPython",
+        "Programming Language :: Python :: Implementation :: PyPy",
     ],
 )

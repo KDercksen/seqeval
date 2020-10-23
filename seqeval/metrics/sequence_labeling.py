@@ -3,13 +3,19 @@ Functions named as ``*_score`` return a scalar value to maximize: the higher
 the better
 """
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
+from __future__ import absolute_import, division, print_function
 
 from collections import defaultdict
 
 import numpy as np
+
+
+def overlaps(span_cand, span_gold):
+    cand_start, cand_stop = span_cand
+    gold_start, gold_stop = span_gold
+    return bool(
+        set(range(cand_start, cand_stop + 1)) & set(range(gold_start, gold_stop + 1))
+    )
 
 
 def get_entities(seq, suffix=False):
@@ -17,6 +23,7 @@ def get_entities(seq, suffix=False):
 
     Args:
         seq (list): sequence of labels.
+        suffix (bool): BIO tag at end instead of start (e.g. LOC-B)
 
     Returns:
         list: list of (chunk_type, chunk_start, chunk_end).
@@ -149,7 +156,7 @@ def start_of_chunk(prev_tag, tag, prev_type, type_):
     return chunk_start
 
 
-def f1_score(y_true, y_pred, average="micro", suffix=False):
+def f1_score(y_true, y_pred, average="micro", suffix=False, call_get_entities=True):
     """Compute the F1 score.
 
     The F1 score can be interpreted as a weighted average of the precision and
@@ -173,8 +180,88 @@ def f1_score(y_true, y_pred, average="micro", suffix=False):
         >>> f1_score(y_true, y_pred)
         0.50
     """
-    true_entities = set(get_entities(y_true, suffix))
-    pred_entities = set(get_entities(y_pred, suffix))
+    if call_get_entities:
+        true_entities = set(get_entities(y_true, suffix))
+        pred_entities = set(get_entities(y_pred, suffix))
+    else:
+        true_entities = y_true
+        pred_entities = y_pred
+
+    nb_correct = len(true_entities & pred_entities)
+    nb_pred = len(pred_entities)
+    nb_true = len(true_entities)
+
+    p = nb_correct / nb_pred if nb_pred > 0 else 0
+    r = nb_correct / nb_true if nb_true > 0 else 0
+    score = 2 * p * r / (p + r) if p + r > 0 else 0
+
+    return score
+
+
+def partial_f1_score(
+    y_true, y_pred, average="micro", suffix=False, call_get_entities=True
+):
+    """Compute the partial F1 score.
+
+    The partial F1 score is similar to the F1 score. The difference is that entities are
+    also counted as correct when there is partial overlap. I.e. some boundary
+    mismatching is allowed.
+
+    Args:
+        y_true : 2d array. Ground truth (correct) target values.
+        y_pred : 2d array. Estimated targets as returned by a tagger.
+
+    Returns:
+        score : float.
+    """
+    if call_get_entities:
+        true_entities = set(get_entities(y_true, suffix))
+        pred_entities = set(get_entities(y_pred, suffix))
+    else:
+        true_entities = y_true
+        pred_entities = y_pred
+
+    nb_pred = len(pred_entities)
+    nb_true = len(true_entities)
+    nb_correct = 0
+
+    for ent_type, start, end in pred_entities:
+        # TODO: and gold_ent[0] == ent_type
+        if any(
+            overlaps((start, end), gold_ent[1:]) and ent_type == gold_ent[0]
+            for gold_ent in true_entities
+        ):
+            nb_correct += 1
+
+    p = nb_correct / nb_pred if nb_pred > 0 else 0
+    r = nb_correct / nb_true if nb_true > 0 else 0
+    score = 2 * p * r / (p + r) if p + r > 0 else 0
+
+    return score
+
+
+def type_invariant_f1_score(
+    y_true, y_pred, average="micro", suffix=False, call_get_entities=True
+):
+    """Compute the type invariant F1 score.
+
+    This can be used when you want to evaluate binary mention detection; e.g. does the
+    tagger find an entity but assigns the type incorrectly.
+
+    Args:
+        y_true : 2d array. Ground truth (correct) target values.
+        y_pred : 2d array. Estimated targets as returned by a tagger.
+
+    Returns:
+        score : float.
+    """
+    # just use the start/end indices, by means of x[1:]
+    if call_get_entities:
+        true_entities = set(x[1:] for x in get_entities(y_true, suffix))
+        pred_entities = set(x[1:] for x in get_entities(y_pred, suffix))
+    else:
+        true_entities = set(x[1:] for x in y_true)
+        pred_entities = set(x[1:] for x in y_pred)
 
     nb_correct = len(true_entities & pred_entities)
     nb_pred = len(pred_entities)
@@ -220,7 +307,9 @@ def accuracy_score(y_true, y_pred):
     return score
 
 
-def precision_score(y_true, y_pred, average="micro", suffix=False):
+def precision_score(
+    y_true, y_pred, average="micro", suffix=False, call_get_entities=True
+):
     """Compute the precision.
 
     The precision is the ratio ``tp / (tp + fp)`` where ``tp`` is the number of
@@ -243,8 +332,12 @@ def precision_score(y_true, y_pred, average="micro", suffix=False):
         >>> precision_score(y_true, y_pred)
         0.50
     """
-    true_entities = set(get_entities(y_true, suffix))
-    pred_entities = set(get_entities(y_pred, suffix))
+    if call_get_entities:
+        true_entities = set(get_entities(y_true, suffix))
+        pred_entities = set(get_entities(y_pred, suffix))
+    else:
+        true_entities = y_true
+        pred_entities = y_pred
 
     nb_correct = len(true_entities & pred_entities)
     nb_pred = len(pred_entities)
@@ -254,7 +347,7 @@ def precision_score(y_true, y_pred, average="micro", suffix=False):
     return score
 
 
-def recall_score(y_true, y_pred, average="micro", suffix=False):
+def recall_score(y_true, y_pred, average="micro", suffix=False, call_get_entities=True):
     """Compute the recall.
 
     The recall is the ratio ``tp / (tp + fn)`` where ``tp`` is the number of
@@ -277,8 +370,12 @@ def recall_score(y_true, y_pred, average="micro", suffix=False):
         >>> recall_score(y_true, y_pred)
         0.50
     """
-    true_entities = set(get_entities(y_true, suffix))
-    pred_entities = set(get_entities(y_pred, suffix))
+    if call_get_entities:
+        true_entities = set(get_entities(y_true, suffix))
+        pred_entities = set(get_entities(y_pred, suffix))
+    else:
+        true_entities = y_true
+        pred_entities = y_pred
 
     nb_correct = len(true_entities & pred_entities)
     nb_true = len(true_entities)
@@ -324,7 +421,9 @@ def performance_measure(y_true, y_pred):
     return performance_dict
 
 
-def classification_report(y_true, y_pred, digits=2, suffix=False, output_json=False):
+def classification_report(
+    y_true, y_pred, digits=2, suffix=False, output_json=False, call_get_entities=True
+):
     """Build a text report showing the main classification metrics.
 
     Args:
@@ -349,62 +448,88 @@ def classification_report(y_true, y_pred, digits=2, suffix=False, output_json=Fa
           macro avg       0.50      0.50      0.50         2
         <BLANKLINE>
     """
-    true_entities = set(get_entities(y_true, suffix))
-    pred_entities = set(get_entities(y_pred, suffix))
+    if call_get_entities:
+        true_entities = set(get_entities(y_true, suffix))
+        pred_entities = set(get_entities(y_pred, suffix))
+    else:
+        true_entities = y_true
+        pred_entities = y_pred
 
     name_width = 0
     d1 = defaultdict(set)
     d2 = defaultdict(set)
     for e in true_entities:
-        d1[e[0]].add((e[1], e[2]))
+        d1[e[0]].add(e)
         name_width = max(name_width, len(e[0]))
     for e in pred_entities:
-        d2[e[0]].add((e[1], e[2]))
+        d2[e[0]].add(e)
 
     last_line_heading = "macro avg"
     width = max(name_width, len(last_line_heading), digits)
 
-    headers = ["precision", "recall", "f1-score", "support"]
-    head_fmt = u"{:>{width}s} " + u" {:>9}" * len(headers)
+    headers = ["precision", "recall", "f1", "partial-f1", "t-inv-f1", "support"]
+    head_fmt = u"{:>{width}s} " + u" {:>11}" * len(headers)
     report = head_fmt.format(u"", *headers, width=width)
     report += u"\n\n"
 
-    row_fmt = u"{:>{width}s} " + u" {:>9.{digits}f}" * 3 + u" {:>9}\n"
+    row_fmt = u"{:>{width}s} " + u" {:>11.{digits}f}" * 5 + u" {:>11}\n"
 
     # build dict with scores as well
     result_dict = {"ents_per_type": {}}  # type: ignore
 
-    ps, rs, f1s, s = [], [], [], []
+    ps, rs, f1s, partial_f1s, t_inv_f1s, s = [], [], [], [], [], []
     for type_name, true_entities in d1.items():
         result_dict["ents_per_type"][type_name] = {}
         pred_entities = d2[type_name]
-        nb_correct = len(true_entities & pred_entities)
-        nb_pred = len(pred_entities)
+        p = precision_score(true_entities, pred_entities, call_get_entities=False)
+        r = recall_score(true_entities, pred_entities, call_get_entities=False)
+        f1 = f1_score(true_entities, pred_entities, call_get_entities=False)
+        partial_f1 = partial_f1_score(
+            true_entities, pred_entities, call_get_entities=False
+        )
+        t_inv_f1 = type_invariant_f1_score(
+            true_entities, pred_entities, call_get_entities=False
+        )
         nb_true = len(true_entities)
 
-        p = nb_correct / nb_pred if nb_pred > 0 else 0
-        r = nb_correct / nb_true if nb_true > 0 else 0
-        f1 = 2 * p * r / (p + r) if p + r > 0 else 0
-
         report += row_fmt.format(
-            *[type_name, p, r, f1, nb_true], width=width, digits=digits
+            *[type_name, p, r, f1, partial_f1, t_inv_f1, nb_true],
+            width=width,
+            digits=digits
         )
 
-        for key, score in zip(["p", "r", "f1", "support"], [p, r, f1, nb_true]):
+        for key, score in zip(
+            ["p", "r", "f1", "partial-f1", "t-inv-f1", "support"],
+            [p, r, f1, partial_f1, t_inv_f1, nb_true],
+        ):
             result_dict["ents_per_type"][type_name][key] = score
 
         ps.append(p)
         rs.append(r)
         f1s.append(f1)
+        partial_f1s.append(partial_f1)
+        t_inv_f1s.append(t_inv_f1)
         s.append(nb_true)
 
     report += u"\n"
 
     # compute averages
     result_dict["micro_avg"] = {
-        "p": precision_score(y_true, y_pred, suffix=suffix),
-        "r": recall_score(y_true, y_pred, suffix=suffix),
-        "f1": f1_score(y_true, y_pred, suffix=suffix),
+        "p": precision_score(
+            y_true, y_pred, suffix=suffix, call_get_entities=call_get_entities
+        ),
+        "r": recall_score(
+            y_true, y_pred, suffix=suffix, call_get_entities=call_get_entities
+        ),
+        "f1": f1_score(
+            y_true, y_pred, suffix=suffix, call_get_entities=call_get_entities
+        ),
+        "partial-f1": partial_f1_score(
+            y_true, y_pred, call_get_entities=call_get_entities
+        ),
+        "t-inv-f1": type_invariant_f1_score(
+            y_true, y_pred, call_get_entities=call_get_entities
+        ),
         "support": int(np.sum(s)),
     }
     report += row_fmt.format(
@@ -412,6 +537,8 @@ def classification_report(y_true, y_pred, digits=2, suffix=False, output_json=Fa
         result_dict["micro_avg"]["p"],
         result_dict["micro_avg"]["r"],
         result_dict["micro_avg"]["f1"],
+        result_dict["micro_avg"]["partial-f1"],
+        result_dict["micro_avg"]["t-inv-f1"],
         result_dict["micro_avg"]["support"],
         width=width,
         digits=digits,
@@ -421,6 +548,8 @@ def classification_report(y_true, y_pred, digits=2, suffix=False, output_json=Fa
         "p": float(np.average(ps, weights=s)),
         "r": float(np.average(rs, weights=s)),
         "f1": float(np.average(f1s, weights=s)),
+        "partial-f1": float(np.average(partial_f1s, weights=s)),
+        "t-inv-f1": float(np.average(t_inv_f1s, weights=s)),
         "support": int(np.sum(s)),
     }
     report += row_fmt.format(
@@ -428,6 +557,8 @@ def classification_report(y_true, y_pred, digits=2, suffix=False, output_json=Fa
         result_dict["macro_avg"]["p"],
         result_dict["macro_avg"]["r"],
         result_dict["macro_avg"]["f1"],
+        result_dict["macro_avg"]["partial-f1"],
+        result_dict["macro_avg"]["t-inv-f1"],
         result_dict["macro_avg"]["support"],
         width=width,
         digits=digits,
